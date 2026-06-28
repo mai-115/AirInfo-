@@ -4,15 +4,13 @@ import requests
 import time
 from datetime import datetime, timedelta
 import os
-import google.generativeai as genai
+from google import genai
 from scraper import scrape_skyscanner
 import json
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
-
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY')
-genai.configure(api_key="AQ.Ab8RN6Jmccf7AMhRaJOD3mQleba9UBiKBW4PXNtF-550Qh_n8g")
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 AVIATIONSTACK_API_KEY = os.environ.get('AVIATIONSTACK_API_KEY', '')
 
@@ -207,30 +205,44 @@ def scrape():
     flights_summary = '\n'.join(flight_lines)
     ai_insights = ""
     if flights:
-        try:
-            prompt = f"""
-            Given the following flight booking data for airline {airline_input}:
-            {flights_summary}
+       try:
+    prompt = f"""
+    Given the following flight booking data for airline {airline_input}:
+    {flights_summary}
 
-            Extract and summarize:
-            - Demand trends (e.g., busy times, days, or locations)
-            - Pricing changes (if price data is available)
-            - Popular routes (most frequent origin-destination pairs)
+    Extract and summarize:
+    - Demand trends (e.g., busy times, days, or locations)
+    - Pricing changes (if price data is available)
+    - Popular routes (most frequent origin-destination pairs)
 
-            Return the insights as clear bullet points under each section header:
-            Demand Trends:
-            - ...
-            Pricing Changes:
-            - ...
-            Popular Routes:
-            - ...
-            """
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            ai_insights = response.text
-        except Exception as e:
-            ai_insights = f"Gemini API error: {e}"
-    return render_template('scrape_results.html', flights=flights, ai_insights=ai_insights, airline=airline_input)
+    Return the insights as clear bullet points under each section header:
+
+    Demand Trends:
+    - ...
+
+    Pricing Changes:
+    - ...
+
+    Popular Routes:
+    - ...
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    ai_insights = response.text
+
+except Exception as e:
+    ai_insights = f"Gemini API error: {e}"
+
+return render_template(
+    'scrape_results.html',
+    flights=flights,
+    ai_insights=ai_insights,
+    airline=airline_input
+)
 
 if __name__ == '__main__':
     app.run(debug=True)
