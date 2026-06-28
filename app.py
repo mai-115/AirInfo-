@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY')
-genai.configure(api_key="AIzaSyDNvTFTbJqR5R0g7-Tr6RQHv0u8Bb3ZPQU")
+genai.configure(api_key="AQ.Ab8RN6Jmccf7AMhRaJOD3mQleba9UBiKBW4PXNtF-550Qh_n8g")
 
 AVIATIONSTACK_API_KEY = os.environ.get('AVIATIONSTACK_API_KEY', '')
 
