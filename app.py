@@ -16,6 +16,36 @@ genai.configure(api_key="AQ.Ab8RN6Jmccf7AMhRaJOD3mQleba9UBiKBW4PXNtF-550Qh_n8g")
 
 AVIATIONSTACK_API_KEY = os.environ.get('AVIATIONSTACK_API_KEY', '')
 
+# --- New: Indian airlines mapping (name -> IATA) ---
+INDIAN_AIRLINES = {
+    "AIR INDIA": "AI",
+    "INDIGO": "6E",
+    "SPICEJET": "SG",
+    "VISTARA": "UK",
+    "AIRASIA INDIA": "I5",
+    "GOFIRST": "G8",
+    "ALLIANCE AIR": "9I",
+    "TRUJET": "2T",
+}
+
+def normalize_airline_to_iata(airline_input):
+    """
+    Accepts an airline string (name or IATA code) and returns the IATA code (uppercase)
+    or None if it cannot be determined.
+    """
+    if not airline_input:
+        return None
+    s = airline_input.strip().upper()
+    # If looks like a 2-character IATA code, return as-is
+    if len(s) == 2 and s.isalnum():
+        return s
+    # Try to match known Indian airlines by name (case-insensitive)
+    for name, code in INDIAN_AIRLINES.items():
+        if s == name or s in name or name in s:
+            return code
+    return None
+# ----------------------------------------------------
+
 def fetch_aviationstack_flights(origin, destination, date):
     #aviationstackiatacodes
     url = (
@@ -129,14 +159,22 @@ def index():
 
 @app.route('/scrape', methods=['POST'])
 def scrape():
-    airline = request.form.get('airline', '').upper()
+    # Accept either an IATA code or an airline name (e.g., "IndiGo" or "6E")
+    airline_input = request.form.get('airline', '').strip()
     api_key = request.form.get('aviationstack_api_key', '').strip() or AVIATIONSTACK_API_KEY
     time_range = request.form.get('time_range', 'any')
     status_filter = request.form.get('status', 'any')
     if not api_key:
         error = 'AviationStack API key is required.'
         return render_template('index.html', error=error)
-    flights = fetch_aviationstack_flights_by_airline(airline, api_key)
+
+    # Normalize airline input to an IATA code (for Indian carriers)
+    normalized_iata = normalize_airline_to_iata(airline_input)
+    # If normalization failed but user provided something, try using raw uppercase (maybe it's already an IATA)
+    airline_code = normalized_iata or (airline_input.upper() if airline_input else '')
+
+    flights = fetch_aviationstack_flights_by_airline(airline_code, api_key) if airline_code else []
+
     # Filter by status
     if status_filter == 'scheduled':
         flights = [f for f in flights if f.get('status', '').lower() == 'scheduled']
@@ -171,7 +209,7 @@ def scrape():
     if flights:
         try:
             prompt = f"""
-            Given the following flight booking data for airline {airline}:
+            Given the following flight booking data for airline {airline_input}:
             {flights_summary}
 
             Extract and summarize:
@@ -192,7 +230,7 @@ def scrape():
             ai_insights = response.text
         except Exception as e:
             ai_insights = f"Gemini API error: {e}"
-    return render_template('scrape_results.html', flights=flights, ai_insights=ai_insights, airline=airline)
+    return render_template('scrape_results.html', flights=flights, ai_insights=ai_insights, airline=airline_input)
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
