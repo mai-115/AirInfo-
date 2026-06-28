@@ -2,6 +2,6 @@ Flask
 requests
 pandas
 selenium
-google-generativeai 
+google-genai
 gunicorn
 matplotlib
