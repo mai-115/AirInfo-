@@ -5,3 +5,4 @@ selenium
 google-genai
 gunicorn
 matplotlib
+google-genai
